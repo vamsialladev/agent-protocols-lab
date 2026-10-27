@@ -1,0 +1,16 @@
+# Protocol SDKs, pinned. Each demo's README says why a version is what it is.
+mcp~=2.3.0
+a2a-sdk[http-server]~=1.2.3
+ag-ui-protocol~=1.0.0
+acp-sdk==1.0.3          # archived (ACP merged into A2A, Aug 2025)
+uvicorn==0.35.0         # acp-sdk 1.0.3 imports uvicorn.config.LoopSetupType, removed in 0.36
+anp~=1.0.7
+agora-protocol~=0.2.0
+x402~=2.25.0
+a2ui-core==0.3.0        # published 2026-10-08; 0.4.0 was 10 days old when this was written
+jwcrypto==1.5.6         # AP2 SDK signing (its own pin)
+sd-jwt==0.10.4          # AP2 SDK (its own pin)
+anthropic~=2.3          # only demo 6 --live
+python-dotenv~=1.2
+httpx~=0.28.1
+hotel-tools-mcp @ https://github.com/vamsialladev/hotel-tools-mcp/archive/53ea634e1a99db1d7f77cf16bee0d6e9d5274cbd.zip  # stage 7 server (demo 1, 2)

@@ -1,0 +1,4 @@
+# Installed with --no-deps: the official AP2 SDK pins pydantic==2.12.5, cryptography==46.0.5 and pytest at runtime,
+# which conflict with the other SDKs. Its models and JWT helper run on the versions above (tests/test_ap2.py).
+# From the GitHub tag v0.2.0 (commit b4587ac); the PyPI package named ap2 belongs to someone else.
+ap2 @ https://github.com/google-agentic-commerce/AP2/archive/b4587ac1d055888a73b4b21750973cffba961793.zip
