@@ -86,6 +86,35 @@ flowchart TB
   A2A_L -.identity.-> NET
 ```
 
+One request end to end, the AP2 spa booking (demo 9, `demos/ap2/demo.py::purchase`), because it's the one with money
+at stake:
+
+```mermaid
+sequenceDiagram
+  participant G as Guest (device key)
+  participant C as Concierge agent
+  participant M as Merchant (spa)
+  participant P as Payment processor (mock)
+  participant L as Audit log
+  C->>C: intent mandate (merchant, item, expires in 1 h)
+  C->>M: ask for a cart
+  M-->>C: cart, signed ES256
+  C->>C: check merchant, expiry, signature, cart hash, $200 / $300-a-day limits
+  C->>L: cart_checked
+  C->>G: "$X to the spa?"
+  alt guest declines
+    G-->>C: no
+    C->>L: declined (nothing is paid)
+  else guest approves
+    G-->>C: signature over this payment and this cart
+    C->>L: approved
+    C->>P: cart + payment mandate
+    P->>P: not used before, both signatures verify, totals match
+    P-->>C: receipt
+    C->>L: settled
+  end
+```
+
 Every demo writes the same audit log (`src/protolab/audit.py`): one trace ID per run, the actor, the event, and
 secrets masked before anything is kept. The tests read it to check what happened, in order.
 
