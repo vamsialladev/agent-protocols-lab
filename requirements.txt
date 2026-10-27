@@ -8,7 +8,7 @@ anp~=1.0.7
 agora-protocol~=0.2.0
 x402~=2.25.0
 a2ui-core==0.3.0        # published 2026-10-08; 0.4.0 was 10 days old when this was written
-jwcrypto==1.5.6         # AP2 SDK signing (its own pin)
+jwcrypto==1.6.1         # AP2 SDK signing (its own pin)
 sd-jwt==0.10.4          # AP2 SDK (its own pin)
 anthropic~=2.3          # only demo 6 --live
 python-dotenv~=1.2
