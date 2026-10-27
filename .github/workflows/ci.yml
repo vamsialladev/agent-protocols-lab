@@ -17,6 +17,7 @@ jobs:
           cache: pip
       - name: Install (the AP2 SDK without its exact pins; see requirements-nodeps.txt)
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
           pip install --no-deps -r requirements-nodeps.txt
       - name: Lint and format check
@@ -32,8 +33,11 @@ jobs:
           for d in mcp_server a2a acp anp agora a2ui ap2 ucp x402; do
             echo "== $d"; python -m demos.$d.demo
           done
+      # PYSEC-2026-1325 (CVE-2024-23342): python-ecdsa's Minerva timing attack on P-256 signing, no fix planned
+      # upstream. ecdsa comes in through anp; nothing here signs with it (ANP uses Ed25519, AP2 ES256, both via
+      # cryptography). docs/DECISIONS.md, decision 9.
       - name: Dependency audit (packages installed from GitHub archives can't be audited and are listed)
-        run: pip-audit --skip-editable --progress-spinner off
+        run: pip-audit --skip-editable --progress-spinner off --ignore-vuln PYSEC-2026-1325
 
   links:
     name: Link check (lychee)

@@ -19,7 +19,7 @@ There's no live demo for this repo: everything runs locally in about 20 seconds 
 |---|---|
 | **Problem** | Agent protocols arrive faster than anyone can read their specs, and several have merged, been renamed or stopped. It's hard to know which one solves which problem, and what it costs to adopt. |
 | **Solution** | Eleven demos, one per protocol (MCP twice), each with the official SDK where one is usable, a README, tests, and the guardrail that matters for it. |
-| **Measured** | 44 tests pass (1 more needs Node and is opt-in), 87% coverage, ruff clean. One live model run (Agora negotiation, Claude Haiku 5.5): agreed in 3 turns, about $0.0005. |
+| **Measured** | 45 tests pass (1 more needs Node and is opt-in), 87% coverage, ruff clean. One live model run (Agora negotiation, Claude Haiku 5.5): agreed in 3 turns, about $0.0005. |
 | **Cost** | $0 to run: no API key needed except for `demos.agora --live`. |
 
 ## The problem
@@ -38,7 +38,7 @@ that runs, so the next decision takes minutes.
 | 3 | [A2A](demos/a2a/) | agent-to-agent | The concierge delegates a guest email (agent card, task lifecycle, artifact); a reader and an ideas agent turn a brochure into ideas | `a2a-sdk` 1.2.3 |
 | 4 | [ACP](demos/acp/) | agent-to-agent | The same delegation over ACP's REST runs, side by side with A2A; an outline → draft → edit chain | `acp-sdk` 1.0.3 (archived) |
 | 5 | [ANP](demos/anp/) | network | Two agents with local did:wba identities authenticate and exchange signed messages; replay, tampering, stale messages and a forged DID document are refused | `anp` 1.0.7 |
-| 6 | [Agora](demos/agora/) | agent-to-agent | Two agents talk in prose, negotiate a protocol document, then switch to structured messages identified by its hash | `agora-protocol` 0.2.0 |
+| 6 | [Agora](demos/agora/) | agent-to-agent | Two agents talk in prose, negotiate a protocol document, then switch to structured messages identified by its hash | `agora-protocol` 0.2.0 core, copied (MIT) |
 | 7 | [AG-UI](demos/ag_ui/) | UI | A backend streams AG-UI events over SSE to a small page: text, a tool call, state, a human approval | `ag-ui-protocol` 1.0 |
 | 8 | [A2UI](demos/a2ui/) | UI | The agent returns a declarative booking card; the renderer allowlists components and runs no agent code | `a2ui-core` 0.3.0 |
 | 9 | [AP2](demos/ap2/) | payments | Intent, cart and payment mandates with signatures, limits and an explicit guest approval; sandbox | AP2 SDK, tag v0.2.0 |
@@ -47,6 +47,8 @@ that runs, so the next decision takes minutes.
 
 What I found along the way changed two of my own repos:
 
+- The Agora package can't be imported without its LangChain stack, and pip-audit flagged 18 known vulnerabilities
+  in the versions it pins. The demo carries the few functions it needs instead (copied under the MIT license).
 - Demo 1 started the stage 7 server from a fresh install, and its first search printed a progress line to stdout.
   Over stdio, stdout *is* the MCP stream, so that line corrupted it. That's fixed in hotel-tools-mcp (decision 14).
 - Connecting the concierge to stage 7 as a guest (before this lab) showed `search_policy` returning a passage marked
@@ -90,7 +92,7 @@ secrets masked before anything is kept. The tests read it to check what happened
 
 Run on Windows 11, Python 3.12.10, 2026-10-27:
 
-- `pytest`: **44 passed, 1 skipped** (demo 2's live run needs Node.js and network for npx: `LAB_NPX=1`), coverage
+- `pytest`: **45 passed, 1 skipped** (demo 2's live run needs Node.js and network for npx: `LAB_NPX=1`), coverage
   **87%** of `demos/` and `src/`.
 - Demo 6 live (Claude Haiku 5.5, once): the model concierge proposed a document with a `boolean` field the format
   doesn't allow, the model operator pointed it out and fixed it, and the concierge accepted. Then both used the field

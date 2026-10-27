@@ -15,7 +15,7 @@ lint:
 	ruff format --check .
 
 audit:
-	pip-audit --skip-editable
+	pip-audit --skip-editable --ignore-vuln PYSEC-2026-1325  # see docs/DECISIONS.md, decision 9
 
 demos:
 	for d in mcp_server a2a acp anp agora a2ui ap2 ucp x402; do $(PY) -m demos.$$d.demo; done

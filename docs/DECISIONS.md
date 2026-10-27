@@ -58,3 +58,22 @@ Each one: context, decision, trade-off, result.
   here.
 - **Trade-off:** the three-server run is unverified until someone runs it.
 - **Result:** listed under Limitations in the README.
+
+## 8. Agora's core copied, the package dropped (2026-10-27)
+- **Context:** the first CI run's pip-audit failed. `import agora` loads its LangChain, LangGraph and RestrictedPython
+  integrations, and the versions agora-protocol 0.2.0 pins had 18 known vulnerabilities between them.
+- **Decision:** copy the parts the demo uses (`Protocol`, `compute_hash`, `extract_metadata`; MIT License) into
+  `src/protolab/agora_core.py` and remove the package. A test pins `compute_hash("hello")` to the package's output.
+- **Trade-off:** a later Agora change to its hashing wouldn't reach the lab by itself.
+- **Result:** the vulnerable tree is gone; the demo and its tests are unchanged.
+
+## 9. jwcrypto above AP2's pin; one advisory ignored with a reason (2026-10-27)
+- **Context:** the same audit flagged jwcrypto 1.5.6 (AP2's pin; PYSEC-2026-70, fixed in 1.5.7) and python-ecdsa
+  0.19.2 (PYSEC-2026-1325 / CVE-2024-23342, a Minerva timing attack on P-256 signing that upstream won't fix).
+- **Decision:** jwcrypto 1.6.1 (AP2 is installed without its pins anyway, decision 3). Ignore only
+  PYSEC-2026-1325 in CI and the Makefile, with the reason next to it: ecdsa arrives through anp, and nothing here signs
+  with it (ANP signs with Ed25519, AP2 with ES256, both through cryptography).
+- **Trade-off:** an ignore can outlive its reason; it's written next to the command so it gets re-read.
+- **Result:** pip-audit passes with that one ignore; AP2's tests pass on jwcrypto 1.6.1.
+
+I should have run pip-audit before the first push. The first CI run on main was red for these reasons.
