@@ -3,7 +3,7 @@ mcp~=2.3.0
 a2a-sdk[http-server]~=1.2.3
 ag-ui-protocol~=1.0.0
 acp-sdk==1.0.3          # archived (ACP merged into A2A, Aug 2025)
-uvicorn==0.35.0         # acp-sdk 1.0.3 imports uvicorn.config.LoopSetupType, removed in 0.36
+uvicorn==0.54.0         # acp-sdk 1.0.3 imports uvicorn.config.LoopSetupType, removed in 0.36
 anp~=1.0.7
 pyyaml~=6.0               # protocol document front matter (demo 6; agora-protocol itself isn't installed)
 x402~=2.25.0
