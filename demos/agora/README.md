@@ -10,7 +10,7 @@ Two agents start in plain language, negotiate a protocol document (front matter 
 
 ## Status and sources
 
-[Agora](https://arxiv.org/abs/2410.11905) (Marro et al., 2024), research library `agora-protocol` 0.2.0. Used for what it standardises: `Protocol`, `compute_hash` and the wire fields.
+[Agora](https://arxiv.org/abs/2410.11905) (Marro et al., 2024), research library `agora-protocol` 0.2.0. Used for what it standardises: `Protocol`, `compute_hash` and the wire fields, copied from the package (MIT) into `src/protolab/agora_core.py`: `import agora` loads its LangChain, LangGraph and RestrictedPython integrations, and pip-audit listed 18 known vulnerabilities in the versions it pins (2026-10-27).
 
 ## Guardrails
 

@@ -5,10 +5,10 @@ ag-ui-protocol~=1.0.0
 acp-sdk==1.0.3          # archived (ACP merged into A2A, Aug 2025)
 uvicorn==0.35.0         # acp-sdk 1.0.3 imports uvicorn.config.LoopSetupType, removed in 0.36
 anp~=1.0.7
-agora-protocol~=0.2.0
+pyyaml~=6.0               # protocol document front matter (demo 6; agora-protocol itself isn't installed)
 x402~=2.25.0
 a2ui-core==0.3.0        # published 2026-10-08; 0.4.0 was 10 days old when this was written
-jwcrypto==1.5.6         # AP2 SDK signing (its own pin)
+jwcrypto~=1.6.1         # AP2 SDK signing (AP2 pins 1.5.6, which has PYSEC-2026-70; fixed in 1.5.7)
 sd-jwt==0.10.4          # AP2 SDK (its own pin)
 anthropic~=2.3          # only demo 6 --live
 python-dotenv~=1.2

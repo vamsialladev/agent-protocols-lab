@@ -1,12 +1,13 @@
 """Demo 6: Agora. Two agents start in natural language, negotiate a protocol document, then switch to the agreed
 structured format, identified by the document's hash.
 
-Uses the official `agora-protocol` 0.2.0 package for what Agora standardises: the protocol document (`Protocol`,
-YAML front matter read by `extract_metadata`), its identity (`compute_hash`: SHA-1, base64) and the wire fields
-(`protocolHash`, `body`). The negotiation is my own small loop, because the package's negotiator, querier and
-programmer are LangChain conversations, and its programmer writes Python "routines" that it runs with
-RestrictedPython. **This demo never runs generated code.** The structured phase is checked against the schema in
-the agreed document instead.
+Uses what Agora standardises: the protocol document (`Protocol`, YAML front matter read by `extract_metadata`), its
+identity (`compute_hash`: SHA-1, base64) and the wire fields (`protocolHash`, `body`). Those functions are copied
+from the official `agora-protocol` 0.2.0 (MIT) into `protolab/agora_core.py`, because importing the package loads
+its LangChain stack, which pip-audit flags. The negotiation is my own small loop, because the package's
+negotiator, querier and programmer are LangChain conversations, and its programmer writes Python "routines" that it
+runs with RestrictedPython. **This demo never runs generated code.** The structured phase is checked against the
+schema in the agreed document instead.
 
 Negotiators: `Scripted` (default: deterministic, used by the tests) or `Claude` (`--live`, Claude Haiku 5.5, needs
 ANTHROPIC_API_KEY; about $0.002 a run).
@@ -19,9 +20,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 
-from agora.common.core import Protocol
-from agora.utils import compute_hash
-
+from protolab.agora_core import Protocol, compute_hash
 from protolab.audit import Audit
 
 DRAFT = """---

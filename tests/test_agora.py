@@ -1,8 +1,7 @@
 """Demo 6: Agora negotiation (scripted), protocol hash, and the structured phase checked against the agreed schema."""
 
-from agora.utils import compute_hash
-
 from demos.agora import demo
+from protolab.agora_core import compute_hash
 
 
 def test_prose_then_negotiation_then_structured_messages():
@@ -34,3 +33,9 @@ def test_fill_follows_whatever_names_were_agreed():
                                                      "guests": 2}  # fmt: skip
     assert demo.conforms({"guests": "two"}, schema) == ["missing session_id", "missing preferred_date",
                                                         "guests should be integer"]  # fmt: skip
+
+
+def test_the_copied_hash_matches_agoras_published_value():
+    # Agora's compute_hash is SHA-1, base64: this is that function's output for "hello" (checked against
+    # agora-protocol 0.2.0 before it was removed from the lab's dependencies).
+    assert compute_hash("hello") == "qvTGHdzF6KLavt4PO0gs2a6pQ00="
