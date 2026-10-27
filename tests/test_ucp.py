@@ -53,3 +53,33 @@ def test_protocol_rules_hold():
     assert done["status"] == "completed"
     assert call("PUT", f"{path}/{s['id']}", {"buyer": {"email": "x@mail.test"}}, AGENT).status_code == 409
     assert call("POST", f"{path}/{s['id']}/cancel", None, AGENT).status_code == 409
+
+
+def test_every_exchange_conforms_to_the_official_sdk_models():
+    out = demo.run()
+    assert len(out["sdk_checks"]) == 9 and all(c.endswith("ok") for c in out["sdk_checks"])
+    assert {c.split(": ")[1].split()[0] for c in out["sdk_checks"]} == {
+        "UcpProfileDocument",
+        "CheckoutCreateRequest",
+        "CheckoutUpdateRequest",
+        "CheckoutCompleteRequest",
+        "Checkout",
+    }
+
+
+def test_the_sdk_check_catches_the_spec_only_shapes():
+    """The first version (written from the spec's examples) used these shapes; the SDK rejects each one."""
+    import pytest
+    from pydantic import ValidationError
+    from ucp_sdk.models.schemas.shopping.checkout import Checkout
+    from ucp_sdk.models.schemas.shopping.checkout_update_request import CheckoutUpdateRequest
+
+    good = demo.run()["session"]
+    for bad in (
+        {**good, "ucp": {**good["ucp"], "payment_handlers": {"sandbox_token": [{"id": "sandbox"}]}}},
+        {**good, "order": {"id": "ord_1", "note": "no permalink_url"}},
+    ):
+        with pytest.raises(ValidationError):
+            Checkout.model_validate(bad)
+    with pytest.raises(ValidationError):
+        CheckoutUpdateRequest.model_validate({"buyer": {"email": "guest@mail.test"}})  # no line_items

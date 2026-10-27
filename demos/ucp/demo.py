@@ -5,10 +5,13 @@ Follows the UCP specification at tag v2026-08-25 (github.com/Universal-Commerce-
 /checkout-sessions/{id}`, `POST .../complete`, `POST .../cancel`), the status lifecycle (`incomplete` ->
 `ready_for_complete` -> `completed`, or `canceled`), amounts in minor units, and the `UCP-Agent` header.
 
-**Built from the spec, not the SDK:** the official `ucp-sdk` (Universal-Commerce-Protocol/python-sdk) isn't on PyPI,
-and installing it from GitHub was blocked in this environment, so the request and response shapes here are written
-from the spec's own examples. The merchant is a mock (the resort gift shop), and payment is a sandbox token: **no
-payment network, no real money.**
+**Checked against the official SDK:** `ucp-sdk` 0.5.0 (github.com/Universal-Commerce-Protocol/python-sdk, tag
+v2026-08-25, commit b6f9b91c; not on PyPI). Every request the agent sends and every response the merchant returns is
+validated with the SDK's models (`CheckoutCreateRequest`, `CheckoutUpdateRequest`, `CheckoutCompleteRequest`,
+`Checkout`, `UcpProfileDocument`) during the run, and the run fails if one doesn't conform. The first version was
+written from the spec's examples alone and failed that check in three ways (docs/ucp-spec-only-run.md).
+
+The merchant is a mock (the resort gift shop), and payment is a sandbox token: **no payment network, no real money.**
 
 Guardrails: the price comes from the merchant's catalog (a price in the request is ignored), complete needs the
 session to be `ready_for_complete` and an `Idempotency-Key` (the same key returns the same order, never a second
@@ -18,6 +21,7 @@ one), the agent completes only after the guest confirms the quoted total, and ev
 """
 
 import asyncio
+import json
 import sys
 import uuid
 
@@ -33,12 +37,15 @@ VERSION = "2026-08-25"
 BASE = "http://giftshop.test"
 ENDPOINT = f"{BASE}/ucp/v1"
 CATALOG = {"robe-beach-resort": ("Beach Resort bathrobe", 6500), "candle-sea-salt": ("Sea salt candle", 2400)}
+# Handler keys are reverse-domain names (the SDK enforces the pattern); this one is the lab's own, on .test.
+HANDLER = "test.hotel-lab.sandbox_token"
+HANDLERS = {HANDLER: [{"id": "sandbox", "version": VERSION}]}
 SESSIONS: dict[str, dict] = {}
 ORDERS_BY_KEY: dict[str, dict] = {}
 
 
 def _envelope(status="success") -> dict:
-    return {"version": VERSION, "status": status, "payment_handlers": {"sandbox_token": [{"id": "sandbox"}]}}
+    return {"version": VERSION, "status": status, "payment_handlers": HANDLERS}
 
 
 def _error(code: str, message: str, http: int = 400) -> JSONResponse:
@@ -85,7 +92,7 @@ async def profile(request: Request):
                                  "services": {"dev.ucp.shopping": [{"version": VERSION, "transport": "rest",
                                                                     "endpoint": ENDPOINT}]},
                                  "capabilities": {"dev.ucp.shopping.checkout": [{"version": VERSION}]},
-                                 "payment_handlers": {"sandbox_token": [{"id": "sandbox"}]}}})  # fmt: skip
+                                 "payment_handlers": HANDLERS}})  # fmt: skip
 
 
 async def create(request: Request):
@@ -139,7 +146,9 @@ async def complete(request: Request):
     if not token.startswith("tok_sandbox_"):
         return _error("payment_declined", "only sandbox tokens are accepted here", 402)
     session["status"] = "completed"
-    session["order"] = {"id": f"ord_{uuid.uuid4().hex[:8]}", "note": "Sandbox order: nothing ships, no money moved."}
+    order_id = f"ord_{uuid.uuid4().hex[:8]}"
+    session["order"] = {"id": order_id, "permalink_url": f"{BASE}/orders/{order_id}",
+                        "label": "Sandbox order: nothing ships, no money moved."}  # fmt: skip
     ORDERS_BY_KEY[key] = _public(session)
     return JSONResponse(ORDERS_BY_KEY[key])
 
@@ -164,23 +173,55 @@ merchant = Starlette(routes=[
 ])  # fmt: skip
 
 
-def client() -> httpx.AsyncClient:
+def sdk_models(method: str, path: str) -> list:
+    """Which official ucp-sdk models a successful exchange must satisfy: (what, model)."""
+    from ucp_sdk.models.schemas.profile import UcpProfileDocument
+    from ucp_sdk.models.schemas.shopping.checkout import Checkout
+    from ucp_sdk.models.schemas.shopping.checkout_complete_request import CheckoutCompleteRequest
+    from ucp_sdk.models.schemas.shopping.checkout_create_request import CheckoutCreateRequest
+    from ucp_sdk.models.schemas.shopping.checkout_update_request import CheckoutUpdateRequest
+
+    if path.endswith("/.well-known/ucp"):
+        return [("response", UcpProfileDocument)]
+    if path.endswith("/complete"):
+        return [("request", CheckoutCompleteRequest), ("response", Checkout)]
+    if method == "POST" and path.endswith("/checkout-sessions"):
+        return [("request", CheckoutCreateRequest), ("response", Checkout)]
+    if method == "PUT":
+        return [("request", CheckoutUpdateRequest), ("response", Checkout)]
+    return [("response", Checkout)]
+
+
+def client(checks: list | None = None) -> httpx.AsyncClient:
+    """The agent's HTTP client. With `checks`, every successful exchange is validated with the SDK's models."""
+
+    async def validate(response: httpx.Response):
+        await response.aread()
+        if checks is None or response.status_code >= 400:
+            return
+        req = response.request
+        data = {"request": json.loads(req.content) if req.content else None, "response": response.json()}
+        for what, model in sdk_models(req.method, req.url.path):
+            model.model_validate(data[what])  # raises pydantic.ValidationError if it doesn't conform
+            checks.append(f"{req.method} {req.url.path.split('/checkout-sessions')[-1] or '/'} {what}: "
+                          f"{model.__name__} ok")  # fmt: skip
+
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=merchant), base_url=BASE,
-                             headers={"UCP-Agent": 'profile="https://concierge.hotel.test/profile"'})  # fmt: skip
+                             headers={"UCP-Agent": 'profile="https://concierge.hotel.test/profile"'},
+                             event_hooks={"response": [validate]})  # fmt: skip
 
 
-async def shop(guest_confirms, audit: Audit) -> dict:
-    async with client() as http:
+async def shop(guest_confirms, audit: Audit, checks: list | None) -> dict:
+    async with client(checks) as http:
         prof = (await http.get("/.well-known/ucp")).json()["ucp"]
         endpoint = prof["services"]["dev.ucp.shopping"][0]["endpoint"].removeprefix(BASE)
         audit.record("concierge", "discovered", endpoint=endpoint, capabilities=list(prof["capabilities"]))
-        cart = {
-            "line_items": [{"item": {"id": "robe-beach-resort", "price": 1}, "quantity": 1}]
-        }  # the price is ignored
-        s = (await http.post(f"{endpoint}/checkout-sessions", json=cart)).json()
+        line_items = [{"item": {"id": "robe-beach-resort", "price": 1}, "quantity": 1}]  # the price is ignored
+        s = (await http.post(f"{endpoint}/checkout-sessions", json={"line_items": line_items})).json()
         audit.record("concierge", "created", id=s["id"], status=s["status"])
-        s = (await http.put(f"{endpoint}/checkout-sessions/{s['id']}",
-                            json={"buyer": {"email": "guest@mail.test"}})).json()  # fmt: skip
+        # An update replaces the session's fields, so it carries the line items again (the SDK requires them).
+        update = {"line_items": line_items, "buyer": {"email": "guest@mail.test"}}
+        s = (await http.put(f"{endpoint}/checkout-sessions/{s['id']}", json=update)).json()
         total = next(t["amount"] for t in s["totals"] if t["type"] == "total")
         audit.record("concierge", "quoted", status=s["status"], total_minor=total)
         if not guest_confirms(f"{s['line_items'][0]['item']['title']}: ${total / 100:.2f}"):
@@ -199,10 +240,10 @@ async def shop(guest_confirms, audit: Audit) -> dict:
         return {"session": done, "retry": retry}
 
 
-def run(guest_confirms=lambda summary: True) -> dict:
-    audit = Audit()
-    out = asyncio.run(shop(guest_confirms, audit))
-    return {**out, "audit": audit.events}
+def run(guest_confirms=lambda summary: True, validate_with_sdk: bool = True) -> dict:
+    audit, checks = Audit(), ([] if validate_with_sdk else None)
+    out = asyncio.run(shop(guest_confirms, audit, checks))
+    return {**out, "sdk_checks": checks, "audit": audit.events}
 
 
 def main() -> int:
@@ -210,8 +251,11 @@ def main() -> int:
     s = out["session"]
     print(f"{s['line_items'][0]['item']['title']} x {s['line_items'][0]['quantity']}: "
           f"${s['totals'][-1]['amount'] / 100:.2f} (the agent sent price 1; the catalog price was used)")  # fmt: skip
-    print("status:", s["status"], "| order:", s["order"])
+    print("status:", s["status"], "| order:", s["order"]["id"], s["order"]["permalink_url"])
     print("retry with the same Idempotency-Key -> same order:", out["retry"]["order"]["id"] == s["order"]["id"])
+    print(f"validated with ucp-sdk 0.5.0: {len(out['sdk_checks'])} checks, all conform")
+    for c in out["sdk_checks"]:
+        print("  ", c)
     return 0
 
 

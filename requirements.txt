@@ -14,3 +14,4 @@ anthropic~=2.3          # only demo 6 --live
 python-dotenv~=1.2
 httpx~=0.28.1
 hotel-tools-mcp @ https://github.com/vamsialladev/hotel-tools-mcp/archive/53ea634e1a99db1d7f77cf16bee0d6e9d5274cbd.zip  # stage 7 server (demo 1, 2)
+ucp-sdk @ https://github.com/Universal-Commerce-Protocol/python-sdk/archive/b6f9b91c018f748a92166266004c8b625142cdfb.zip  # official SDK, tag v2026-08-25 (not on PyPI); demo 10 validates against it
