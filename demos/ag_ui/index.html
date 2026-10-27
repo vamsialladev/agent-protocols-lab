@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AG-UI demo</title>
+<style>
+  :root { --bg: #f7f4ee; --ink: #1c1f1d; --muted: #5b625e; --line: #e3ddd2; --primary: #1e4636; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111613; --ink: #ece8e0; --muted: #a3aba6; --line: #26302b; --primary: #8cc4a5; } }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; }
+  .msg { padding: 8px 0; } .ev { color: var(--muted); font: 13px ui-monospace, monospace; border-top: 1px solid var(--line); padding: 4px 0; }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 12px 0; }
+  button { border-radius: 8px; border: 1px solid var(--primary); background: var(--primary); color: var(--bg); padding: 6px 12px; margin-right: 8px; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--primary); }
+  pre { white-space: pre-wrap; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>AG-UI: a booking with a human approval</h1>
+  <p>Simulated hotel group, synthetic data. Every line under "Events" is one AG-UI event from the server.</p>
+  <button id="start">Ask: "Book the kids club tomorrow for my two kids"</button>
+  <div id="chat"></div>
+  <h2>State</h2><pre id="state">{}</pre>
+  <h2>Events</h2><div id="events"></div>
+</main>
+<script>
+const chat = document.getElementById("chat"), events = document.getElementById("events"), stateEl = document.getElementById("state");
+let state = {}, current = null;
+
+function line(parent, cls, text) { const d = document.createElement("div"); d.className = cls; d.textContent = text; parent.appendChild(d); return d; }
+
+function applyPatch(ops) {  // the JSON Patch subset STATE_DELTA uses here: replace at a /a/b path
+  for (const op of ops) {
+    const keys = op.path.split("/").slice(1); let o = state;
+    for (const k of keys.slice(0, -1)) o = o[k];
+    if (op.op === "replace" || op.op === "add") o[keys[keys.length - 1]] = op.value;
+  }
+}
+
+function handle(ev) {
+  line(events, "ev", ev.type + (ev.toolCallName ? " " + ev.toolCallName : "") + (ev.name ? " " + ev.name : ""));
+  if (ev.type === "TEXT_MESSAGE_START") current = line(chat, "msg", "");
+  if (ev.type === "TEXT_MESSAGE_CONTENT" && current) current.textContent += ev.delta;
+  if (ev.type === "TOOL_CALL_RESULT") line(chat, "ev", "tool result: " + ev.content);
+  if (ev.type === "STATE_SNAPSHOT") state = ev.snapshot;
+  if (ev.type === "STATE_DELTA") applyPatch(ev.delta);
+  if (ev.type === "CUSTOM" && ev.name === "human_approval_requested") approvalCard(ev.value);
+  if (ev.type === "RUN_ERROR") line(chat, "msg", "Error: " + ev.message);
+  stateEl.textContent = JSON.stringify(state, null, 2);
+}
+
+async function run(url, body) {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "text/event-stream" }, body: JSON.stringify(body) });
+  const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read(); if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i; while ((i = buf.indexOf("\n\n")) >= 0) {
+      const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+      const data = chunk.split("\n").filter(l => l.startsWith("data:")).map(l => l.slice(5).trim()).join("");
+      if (data) handle(JSON.parse(data));
+    }
+  }
+}
+
+function approvalCard(value) {
+  const card = line(chat, "card", "Approve this request? " + value.summary + " ");
+  const yes = document.createElement("button"), no = document.createElement("button");
+  yes.textContent = "Approve"; no.textContent = "Decline"; no.className = "secondary";
+  const decide = ok => { yes.disabled = no.disabled = true; run("/approval/" + encodeURIComponent(value.approval_id), { approve: ok }); };
+  yes.onclick = () => decide(true); no.onclick = () => decide(false);
+  card.appendChild(yes); card.appendChild(no);
+}
+
+document.getElementById("start").onclick = () => run("/agent", { threadId: "t-" + Date.now(), runId: "r1", messages: [{ role: "user", content: "Book the kids club tomorrow for my two kids" }] });
+</script>
+</body>
+</html>
