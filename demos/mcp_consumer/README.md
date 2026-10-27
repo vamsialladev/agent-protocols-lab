@@ -45,6 +45,7 @@ Command: `PYTHONPATH=src python -m demos.mcp_consumer.demo`. Full output: [docs/
 | Playwright on the local page | page loaded and read; the local server logged one request, `GET /events.html` |
 | `write_file`, `browser_run_code_unsafe`, `https://example.com` | refused by the gateway; never reached a server |
 | Sandbox afterwards | still only the copied brochure (nothing written), then removed |
+| Playwright's own snapshots (`.playwright-mcp/`, git-ignored) | two files, one per run, each only the synthetic events page |
 
 The live test (`LAB_NPX=1 pytest tests/test_mcp_consumer.py`) checks the same points and passed on the same day.
 CI runs the gateway tests with fake sessions (no Node, no browser there).
