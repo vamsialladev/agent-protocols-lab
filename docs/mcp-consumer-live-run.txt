@@ -1,0 +1,16 @@
+# Demo 2 live run, 2026-10-27T14:47Z
+node v24.22.1, npx 11.19.1, Python 3.12.10, Windows 11
+command: PYTHONPATH=src python -m demos.mcp_consumer.demo
+
+hotel: exposing ['list_activities', 'search_policy']
+files: exposing ['list_allowed_directories', 'list_directory', 'read_text_file']
+browser: exposing ['browser_navigate', 'browser_snapshot']
+filesystem root (server's own answer): Allowed directories: C:\projects\project1\agent-protocols-lab\.mcp-sandbox\run-e05f2c0b
+brochure: - Kids club: sandcastle morning, 09:30-11:30, ages 4-11, free for resident guests.
+read outside the root (server's answer): Access denied - path outside allowed directories: C:\projects\project1\agent-protocols-lab\README.md not in C:\projects\
+policy: Page 1
+events page: True
+refused: files.write_file is not on the allowlist
+refused: browser.browser_run_code_unsafe is not on the allowlist
+refused: https://example.com is not an allowed origin
+files in the sandbox after the run: ['beach-resort-activities.md'] | sandbox removed: True

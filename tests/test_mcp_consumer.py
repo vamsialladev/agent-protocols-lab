@@ -77,3 +77,6 @@ def test_live_three_servers():  # pragma: no cover - needs Node.js, network for 
     out = asyncio.run(demo.main_async())
     assert "Kids club" in out["brief"]["brochure"] and "turtle talk" in out["brief"]["events_page"].lower()
     assert len(out["refused"]) == 3
+    assert ".mcp-sandbox" in out["brief"]["allowed_directories"]  # the server's only root is the run's sandbox
+    assert "Access denied" in out["brief"]["outside_root"]  # the server's own fence, behind the gateway's
+    assert out["brief"]["sandbox_files_after"] == ["beach-resort-activities.md"] and out["sandbox_removed"]
