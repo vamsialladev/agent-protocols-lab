@@ -38,6 +38,36 @@ jobs:
       # cryptography). docs/DECISIONS.md, decision 9.
       - name: Dependency audit (packages installed from GitHub archives can't be audited and are listed)
         run: pip-audit --skip-editable --progress-spinner off --ignore-vuln PYSEC-2026-1325
+      - name: Red-team gate (every attack in docs/RED_TEAM.md must be refused)
+        run: >-
+          python -m pytest -q -p no:cacheprovider
+          tests/test_a2a.py::test_a_wrong_token_is_refused
+          tests/test_a2a.py::test_a_bad_request_fails_the_task_cleanly
+          tests/test_acp.py::test_a_wrong_token_is_refused
+          tests/test_anp.py::test_a_header_made_for_another_domain_is_refused
+          tests/test_anp.py::test_unknown_did_and_a_forged_document_are_refused
+          tests/test_anp.py::test_a_stale_message_is_refused
+          tests/test_ap2.py::test_limits_and_replay_in_one_session
+          tests/test_ap2.py::test_a_cart_changed_after_signing_is_refused
+          tests/test_ap2.py::test_a_merchant_outside_the_intent_is_refused
+          tests/test_ap2.py::test_an_expired_cart_is_refused
+          tests/test_ap2.py::test_a_signature_from_another_key_or_for_another_payment_is_refused
+          tests/test_x402.py::test_402_then_pay_then_data_and_a_replay_is_refused
+          tests/test_x402.py::test_a_forged_or_mismatched_voucher_does_not_settle
+          tests/test_a2ui.py::test_components_and_events_outside_the_allowlist_are_refused
+          tests/test_a2ui.py::test_the_official_validator_rejects_a_malformed_allowed_component
+          tests/test_a2ui.py::test_tree_problems_and_protocol_problems_are_refused
+          tests/test_mcp_consumer.py::test_only_allowlisted_tools_are_exposed
+          tests/test_mcp_consumer.py::test_refused_calls_never_reach_the_server_and_are_audited
+          tests/test_mcp_server.py::test_each_role_sees_only_its_tools_and_gets_policy_passages
+          tests/test_ucp.py::test_every_exchange_conforms_to_the_official_sdk_models
+          tests/test_ucp.py::test_the_sdk_check_catches_the_spec_only_shapes
+      - name: SBOM (CycloneDX)
+        run: cyclonedx-py environment --output-format JSON --output-file sbom.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: sbom.json
 
   links:
     name: Link check (lychee)
