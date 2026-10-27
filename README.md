@@ -4,6 +4,7 @@
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
 [![ruff](https://img.shields.io/badge/lint-ruff-261230)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+![coverage gate 80%](https://img.shields.io/badge/coverage%20gate-%E2%89%A580%25-brightgreen)
 
 One small, working, tested demo per agent protocol: MCP, A2A, ACP, ANP, Agora, AG-UI, A2UI, AP2, UCP and x402, all in
 the same hotel scenario. It's part of a **simulated client engagement** for a fictional hotel group, and **all data is
@@ -11,7 +12,7 @@ synthetic**. No real money, network payments, wallets or keys anywhere.
 
 <!-- DEMO-VIDEO -->
 
-There's no live demo for this repo: everything runs locally in about 20 seconds (`make test`).
+**▶ Try it live:** there's no hosted demo for this repo. Everything runs locally in about 20 seconds (`make test`).
 
 ## At a glance
 
@@ -131,6 +132,24 @@ spike, before and after using the lab, on two or three real integration requests
 | **Monitoring, alerting, hallucination and off-brand detection** | **Built:** the audit log with trace IDs, and structured checks instead of trust (schemas for Agora bodies, catalog validation for A2UI, signatures for ANP and AP2). **Roadmap:** ship the audit log to the shared ops tables the hotel apps use (hotel-ai-platform), alert on refusal spikes. |
 | **Failure modes and rollback** | **Built:** every demo has a refusal path that's tested (wrong token, replayed nonce, tampered cart, unknown component, real network offered). A down agent is a fallback, not a crash (the concierge's A2A tool). Rollback: each SDK is pinned; reverting a pin is one line. |
 
+## Security & guardrails
+
+What every demo shows, and where:
+
+| Concern | How | Demos |
+|---|---|---|
+| Inter-agent auth | Bearer tokens (constant-time compare) on A2A and ACP, the public card or manifest only; did:wba auth headers bound to the receiver's domain | 3, 4, 5 |
+| Signed messages | Ed25519 over canonical JSON (ANP); ES256 JWTs for the merchant's cart and the guest's approval (AP2); HMAC vouchers (x402, mock) | 5, 9, 11 |
+| Spending limits | $200 per payment / $300 a day (AP2); $0.05 per call / $0.20 a session (x402); catalog prices only (UCP) | 9, 10, 11 |
+| Replay protection | Nonces + 5-minute window (ANP); mandate IDs used once (AP2); vouchers used once (x402); Idempotency-Key (UCP) | 5, 9, 10, 11 |
+| Allowlists | MCP tools per server, read-only scopes and origins; A2UI components and events; x402 payees and networks | 2, 8, 11 |
+| Human approval | AG-UI approval event decided once; AP2 guest signature; UCP completes only after the guest confirms the quote | 7, 9, 10 |
+| Audit logs with trace IDs | `protolab.audit.Audit`: one trace ID per run, secrets masked | all |
+
+More in [SECURITY.md](SECURITY.md) (threat model, OWASP Top 10 for LLM applications).
+
+**Red team:** the attack cases each demo is tested against are listed in [docs/RED_TEAM.md](docs/RED_TEAM.md).
+
 ## Run locally
 
 Windows (PowerShell):
@@ -208,22 +227,6 @@ protocols by context-oriented vs inter-agent and general-purpose vs domain-speci
 | PXP | agent-to-agent | Protocol for explanations between a human and an agent | Research paper | [arXiv 2410.20600](https://arxiv.org/abs/2410.20600) | reviewed only |
 | CrowdES | domain-specific | Crowd simulation with agents | Research paper | [arXiv 2504.04756](https://arxiv.org/abs/2504.04756) | reviewed only |
 | SPPs | domain-specific | Spatial population protocols | Research paper | [arXiv 2411.08434](https://arxiv.org/abs/2411.08434) | reviewed only |
-
-## Security
-
-What every demo shows, and where:
-
-| Concern | How | Demos |
-|---|---|---|
-| Inter-agent auth | Bearer tokens (constant-time compare) on A2A and ACP, the public card or manifest only; did:wba auth headers bound to the receiver's domain | 3, 4, 5 |
-| Signed messages | Ed25519 over canonical JSON (ANP); ES256 JWTs for the merchant's cart and the guest's approval (AP2); HMAC vouchers (x402, mock) | 5, 9, 11 |
-| Spending limits | $200 per payment / $300 a day (AP2); $0.05 per call / $0.20 a session (x402); catalog prices only (UCP) | 9, 10, 11 |
-| Replay protection | Nonces + 5-minute window (ANP); mandate IDs used once (AP2); vouchers used once (x402); Idempotency-Key (UCP) | 5, 9, 10, 11 |
-| Allowlists | MCP tools per server, read-only scopes and origins; A2UI components and events; x402 payees and networks | 2, 8, 11 |
-| Human approval | AG-UI approval event decided once; AP2 guest signature; UCP completes only after the guest confirms the quote | 7, 9, 10 |
-| Audit logs with trace IDs | `protolab.audit.Audit`: one trace ID per run, secrets masked | all |
-
-More in [SECURITY.md](SECURITY.md) (threat model, OWASP Top 10 for LLM applications).
 
 ## Configuration
 
