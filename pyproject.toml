@@ -1,6 +1,6 @@
 [project]
 name = "agent-protocols-lab"
-version = "0.1.0"
+version = "0.2.0"
 description = "One small, tested demo per agent protocol (MCP, A2A, ACP, ANP, Agora, AG-UI, A2UI, AP2, UCP, x402), in a simulated hotel."
 requires-python = ">=3.12"
 license = "MIT"

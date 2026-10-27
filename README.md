@@ -19,7 +19,7 @@ There's no live demo for this repo: everything runs locally in about 20 seconds 
 |---|---|
 | **Problem** | Agent protocols arrive faster than anyone can read their specs, and several have merged, been renamed or stopped. It's hard to know which one solves which problem, and what it costs to adopt. |
 | **Solution** | Eleven demos, one per protocol (MCP twice), each with the official SDK where one is usable, a README, tests, and the guardrail that matters for it. |
-| **Measured** | 45 tests pass (1 more needs Node and is opt-in), 87% coverage, ruff clean. One live model run (Agora negotiation, Claude Haiku 5.5): agreed in 3 turns, about $0.0005. |
+| **Measured** | 47 tests pass, plus 1 live test run locally (needs Node and Chrome), 86% coverage, ruff clean. One live model run (Agora negotiation, Claude Haiku 5.5): agreed in 3 turns, about $0.0005. |
 | **Cost** | $0 to run: no API key needed except for `demos.agora --live`. |
 
 ## The problem
@@ -42,7 +42,7 @@ that runs, so the next decision takes minutes.
 | 7 | [AG-UI](demos/ag_ui/) | UI | A backend streams AG-UI events over SSE to a small page: text, a tool call, state, a human approval | `ag-ui-protocol` 1.0 |
 | 8 | [A2UI](demos/a2ui/) | UI | The agent returns a declarative booking card; the renderer allowlists components and runs no agent code | `a2ui-core` 0.3.0 |
 | 9 | [AP2](demos/ap2/) | payments | Intent, cart and payment mandates with signatures, limits and an explicit guest approval; sandbox | AP2 SDK, tag v0.2.0 |
-| 10 | [UCP](demos/ucp/) | commerce | Discover, cart, quote, guest confirms, complete, against a mock merchant | UCP spec v2026-08-25 |
+| 10 | [UCP](demos/ucp/) | commerce | Discover, cart, quote, guest confirms, complete, against a mock merchant | UCP spec v2026-08-25, validated with `ucp-sdk` 0.5.0 |
 | 11 | [x402](demos/x402/) | payments | An API answers HTTP 402; the agent pays a fully mocked payment and retries | `x402` 2.25.0 |
 
 What I found along the way changed two of my own repos:
@@ -92,15 +92,21 @@ secrets masked before anything is kept. The tests read it to check what happened
 
 Run on Windows 11, Python 3.12.10, 2026-10-27:
 
-- `pytest`: **45 passed, 1 skipped** (demo 2's live run needs Node.js and network for npx: `LAB_NPX=1`), coverage
-  **87%** of `demos/` and `src/`.
+- `pytest`: **47 passed, 1 skipped** (demo 2's live test, opt-in with `LAB_NPX=1`; it passed when run locally),
+  coverage **86%** of `demos/` and `src/`.
 - Demo 6 live (Claude Haiku 5.5, once): the model concierge proposed a document with a `boolean` field the format
   doesn't allow, the model operator pointed it out and fixed it, and the concierge accepted. Then both used the field
   names they had agreed on. 1,317 input / 789 output tokens, about $0.0005
   ([log](docs/agora-live-run.txt)). One run, so it shows the flow works, not how often.
 - Demo 7 checked in a browser: 48 events, the approval card, the state update after Approve, no console errors.
-- Demo 2 live: **not run here** (the environment's permission check blocked starting the npm servers). The gateway
-  is tested with fake sessions; the live test is in the suite behind `LAB_NPX=1`.
+- Demo 2 live (2026-10-27): the official filesystem server (1.0.0) and Microsoft's Playwright server (0.0.83),
+  both pinned and provenance-checked. The filesystem server's only root was a fresh folder inside the lab, and it
+  refused a read outside it on its own. Playwright ran headless with a fresh profile against a local synthetic page.
+  The gateway refused the write, the unsafe browser tool and the outside URL before they reached a server
+  ([evidence](demos/mcp_consumer/README.md#live-run-2026-10-27-windows-11-node-24221-npx-11191-python-31210)).
+- Demo 10 with the official `ucp-sdk`: the first, spec-only version failed 6 of 9 SDK checks (handler key format,
+  a missing order link, an update without line items); after the fixes all 9 conform, and the run validates every
+  exchange ([both runs](demos/ucp/README.md#two-runs-labelled)). pip-audit after installing the SDK: nothing new.
 
 **What it taught me.** Two of the eleven SDKs are where the friction was. The archived `acp-sdk` needs a
 uvicorn from June 2025 and a header its own client forgets, which is what "merged into A2A" looks like in practice.
@@ -152,9 +158,8 @@ Docker: `docker build -t agent-protocols-lab . && docker run --rm agent-protocol
 
 ## Limitations and roadmap
 
-- Demo 2's live run (npm servers, Chrome) hasn't run in this environment; the gateway logic is unit-tested.
-- Demo 10 is written from the UCP spec, not the official `ucp-sdk` (not on PyPI; installing from GitHub was blocked
-  here).
+- Demo 2's live run isn't in CI (Node and Chrome); it was run locally on 2026-10-27 and CI runs the gateway tests.
+- `ucp-sdk` isn't on PyPI, so it's installed from its tag's commit archive.
 - Most agents are small rule-based stand-ins so the demos are free and repeatable; the real Claude agents live in the
   hotel apps (the concierge, the guest request agent).
 - x402 uses a mock scheme on a mock network on purpose: no testnet, no keys. AP2 signatures use keys made per run.

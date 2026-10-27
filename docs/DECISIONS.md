@@ -57,7 +57,10 @@ Each one: context, decision, trade-off, result.
 - **Decision:** unit-test the gateway with fake sessions; keep the live test behind `LAB_NPX=1`; say it hasn't run
   here.
 - **Trade-off:** the three-server run is unverified until someone runs it.
-- **Result:** listed under Limitations in the README.
+- **Result (updated 2026-10-27):** run live with the owner's approval and conditions: exact pinned versions with
+  npm provenance checked, the filesystem server rooted in a fresh folder inside the lab with copies of synthetic
+  files, Playwright headless with a fresh profile on a local page only. Every check passed
+  (demos/mcp_consumer/README.md). The live test stays opt-in because CI has no Chrome.
 
 ## 8. Agora's core copied, the package dropped (2026-10-27)
 - **Context:** the first CI run's pip-audit failed. `import agora` loads its LangChain, LangGraph and RestrictedPython
@@ -77,3 +80,16 @@ Each one: context, decision, trade-off, result.
 - **Result:** pip-audit passes with that one ignore; AP2's tests pass on jwcrypto 1.6.1.
 
 I should have run pip-audit before the first push. The first CI run on main was red for these reasons.
+
+## 10. UCP checked against the official SDK, both runs kept (2026-10-27)
+- **Context:** demo 10 was first written from the spec's examples because installing `ucp-sdk` was blocked. The
+  owner then approved installing it from the official organisation, pinned, inside the lab's virtual environment.
+- **Decision:** install `ucp-sdk` 0.5.0 from its tag v2026-08-25 (commit b6f9b91c), run pip-audit, and validate every
+  request and response of the demo's flow with the SDK's models during the run.
+- **Trade-off:** the demo now depends on an SDK that isn't on PyPI and is generated from schemas that change with
+  each dated spec release.
+- **Result:** pip-audit: nothing new. The spec-only version failed 6 of 9 checks: payment handler keys must be
+  reverse-domain names with a version, an order needs a `permalink_url`, and an update must carry the line items.
+  Fixed; 9 of 9 conform. Both runs are saved and labelled (docs/ucp-spec-only-run.md, docs/ucp-sdk-run.md), and a
+  test keeps the old shapes to show the SDK rejects them. Writing from examples got the flow right and the
+  details wrong.
