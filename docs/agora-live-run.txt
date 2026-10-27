@@ -1,0 +1,9 @@
+natural language: Yes, the reef snorkel tour on 3 November has 6 places left, $55 each.
+  concierge: I'd like to propose a protocol for asking a tour operator whether a session has room for a party. Here is the 
+   operator: The draft uses "boolean", which isn't one of the allowed field types. Since `places_remaining` already tells t
+  concierge: ACCEPT
+agreed: tour-availability-check hash RZSm7NchnTZDwIFib3uKJMoyvg8=
+structured request -> {'status': 'success', 'body': {'session_id': 'reef-snorkel', 'places_remaining': 6, 'price_per_person': 55.0}}
+malformed body     -> {'status': 'error', 'body': 'missing preferred_date; unexpected extra'}
+unknown hash       -> {'status': 'error', 'body': 'unknown protocol hash: negotiate first'}
+tokens: {'input_tokens': 1317, 'output_tokens': 789}
