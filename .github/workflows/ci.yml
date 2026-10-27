@@ -1,0 +1,64 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Lint, tests, demo smoke runs, audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install (the AP2 SDK without its exact pins; see requirements-nodeps.txt)
+        run: |
+          pip install -r requirements-dev.txt
+          pip install --no-deps -r requirements-nodeps.txt
+      - name: Lint and format check
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Tests (coverage gate 80%; no API key, no Node; demo 2's live test is opt-in)
+        run: python -m pytest --cov=demos --cov=protolab --cov-report=term-missing --cov-fail-under=80
+      - name: Every demo that runs without Node or a key, end to end
+        env:
+          PYTHONPATH: src
+        run: |
+          for d in mcp_server a2a acp anp agora a2ui ap2 ucp x402; do
+            echo "== $d"; python -m demos.$d.demo
+          done
+      - name: Dependency audit (packages installed from GitHub archives can't be audited and are listed)
+        run: pip-audit --skip-editable --progress-spinner off
+
+  links:
+    name: Link check (lychee)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress --max-retries 3 --accept "200..=299,303,403,429,503,999"
+            --exclude "^https://(www\.)?linkedin\.com" --exclude "^https?://(localhost|127\.0\.0\.1)"
+            --exclude "^https?://[a-z.-]+\.test" --exclude "^https://a2ui\.org/specification"
+            --exclude "^https://github\.com/vamsialladev/agent-protocols-lab/actions"
+            --exclude "^https://github\.com/(wildcard-xyz/agents\.json|near/aitp)"
+            README.md SECURITY.md CONTRIBUTING.md CHANGELOG.md CODE_OF_CONDUCT.md 'docs/**/*.md' 'demos/**/README.md'
+          fail: true
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: gitleaks (full history)
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks git --redact --verbose --exit-code 1 .
